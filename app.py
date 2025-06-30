@@ -12,7 +12,8 @@ st.set_page_config(
 
 @st.cache_data
 def load_data():
-    df = pd.read_excel("Fitness App Subscription_DAIDM_GJ25NS003 .xlsx")
+    # Read everything as string to avoid type inference bugs
+    df = pd.read_excel("Fitness App Subscription_DAIDM_GJ25NS003 .xlsx", dtype=str)
     df.columns = df.columns.str.strip()
     return df
 
@@ -21,8 +22,10 @@ df = load_data()
 with st.sidebar:
     st.write("🗂 **Columns in your dataset:**")
     st.write(df.columns.tolist())
+    st.write("**Data Types Before Cleaning:**")
+    st.write(df.dtypes)
 
-# Column mappings
+# ---- COLUMN DEFINITIONS ----
 age_col = 'Age'
 bmi_col = 'BMI'
 active_min_col = 'Daily_Active_Minutes'
@@ -34,7 +37,29 @@ screen_time_col = 'Screen_Time_Minutes'
 days_active_col = 'Days_Active_Per_Month'
 subscribed_col = 'Subscribed'
 
-# SIDEBAR FILTERS
+# ---- DATA CLEANING ----
+
+# Convert numeric columns
+numeric_columns = [age_col, bmi_col, active_min_col, steps_col, workouts_col, calories_col, sleep_col, screen_time_col, days_active_col]
+for col in numeric_columns:
+    df[col] = pd.to_numeric(df[col], errors='coerce')
+
+# Standardize 'Subscribed' column to string, and strip spaces/case
+df[subscribed_col] = df[subscribed_col].astype(str).str.strip().str.title()
+df[subscribed_col] = df[subscribed_col].replace({'Yes':'Yes', 'No':'No'})
+
+# Drop rows where Subscribed is not Yes or No
+df = df[df[subscribed_col].isin(['Yes','No'])]
+
+# Remove rows with missing values in required columns
+df = df.dropna(subset=numeric_columns + [subscribed_col])
+
+# Show datatypes after cleaning
+with st.sidebar:
+    st.write("**Data Types After Cleaning:**")
+    st.write(df.dtypes)
+
+# ---- FILTERS ----
 st.sidebar.header("Filter Data")
 age = st.sidebar.slider(
     "Age",
@@ -55,13 +80,12 @@ filtered_df = df[
 if subscription != "Both":
     filtered_df = filtered_df[filtered_df[subscribed_col] == subscription]
 
-# HEADER
+# ---- DASHBOARD ----
 st.title("Fitness App Subscription Analytics Dashboard")
 st.markdown(
     "This dashboard provides key insights into user behavior, health, and engagement with the fitness app to help management make data-driven decisions."
 )
 
-# TABS
 tabs = st.tabs([
     "Overview",
     "Engagement & Health",
@@ -69,7 +93,7 @@ tabs = st.tabs([
     "Custom Analysis"
 ])
 
-# --------------------------- TAB 1: OVERVIEW ---------------------------
+# ----------------- TAB 1: OVERVIEW -----------------
 with tabs[0]:
     st.subheader("General Overview")
     st.markdown(
@@ -107,7 +131,7 @@ with tabs[0]:
         Avg_Days_Active=(days_active_col, 'mean')
     ).reset_index(), use_container_width=True)
 
-# ---------------------- TAB 2: ENGAGEMENT & HEALTH ----------------------------
+# --------------- TAB 2: ENGAGEMENT & HEALTH --------------
 with tabs[1]:
     st.subheader("User Engagement & Health Metrics")
     st.markdown("Understand user engagement patterns and health metrics to improve product offering.")
@@ -142,7 +166,7 @@ with tabs[1]:
     sns.boxplot(x=subscribed_col, y=active_min_col, data=filtered_df, ax=ax6)
     st.pyplot(fig6)
 
-# ---------------------- TAB 3: SUBSCRIPTION ANALYSIS ----------------------------
+# --------------- TAB 3: SUBSCRIPTION ANALYSIS ---------------
 with tabs[2]:
     st.subheader("Detailed Subscription Analysis")
     st.markdown("Analyze drivers of subscription, conversion funnels, and micro-segments.")
@@ -199,7 +223,7 @@ with tabs[2]:
     sns.boxplot(x=subscribed_col, y=days_active_col, data=filtered_df, ax=ax13)
     st.pyplot(fig13)
 
-# ---------------------- TAB 4: CUSTOM ANALYSIS & DEEP DIVES ----------------------------
+# --------------- TAB 4: CUSTOM ANALYSIS & DEEP DIVES ---------------
 with tabs[3]:
     st.subheader("Custom Analysis and Deep Dives")
     st.markdown("For advanced users, explore the data with custom groupings and filters.")
@@ -229,4 +253,3 @@ with tabs[3]:
 
 st.markdown("---")
 st.caption("Dashboard created with Streamlit. © 2025 YourNameHere")
-
