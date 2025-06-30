@@ -61,7 +61,7 @@ with tabs[0]:
     col4.metric("Subscription Rate (%)", f"{sub_rate:.1f}%")
 
     # Pie Chart
-    st.markdown("**Subscription Status Distribution**  
+    st.markdown("**Subscription Status Distribution**  This pie chart shows the proportion of subscribed vs non-subscribed users.")
     This pie chart shows the proportion of subscribed vs non-subscribed users.")
     sub_counts = filtered_df['Subscribed'].value_counts()
     fig1, ax1 = plt.subplots()
