@@ -12,21 +12,17 @@ st.set_page_config(
 
 @st.cache_data
 def load_data():
-    # Read everything as string first to avoid dtype issues
-    df = pd.read_excel("Fitness App Subscription_DAIDM_GJ25NS003 .xlsx", dtype=str)
+    df = pd.read_excel("Fitness App Subscription_DAIDM_GJ25NS003 .xlsx")
     df.columns = df.columns.str.strip()
     return df
 
 df = load_data()
 
-# --- Sidebar Debug Info ---
 with st.sidebar:
     st.write("🗂 **Columns in your dataset:**")
     st.write(df.columns.tolist())
-    st.write("**Data Types Before Cleaning:**")
-    st.write(df.dtypes)
 
-# ---- COLUMN DEFINITIONS (update here if your sheet changes) ----
+# Column mappings
 age_col = 'Age'
 bmi_col = 'BMI'
 active_min_col = 'Daily_Active_Minutes'
@@ -38,51 +34,17 @@ screen_time_col = 'Screen_Time_Minutes'
 days_active_col = 'Days_Active_Per_Month'
 subscribed_col = 'Subscribed'
 
-# ---- DATA CLEANING ----
-numeric_columns = [
-    age_col, bmi_col, active_min_col, steps_col,
-    workouts_col, calories_col, sleep_col, screen_time_col, days_active_col
-]
-for col in numeric_columns:
-    df[col] = pd.to_numeric(df[col], errors='coerce')
-
-# Standardize Subscribed col
-df[subscribed_col] = df[subscribed_col].astype(str).str.strip().str.title()
-df[subscribed_col] = df[subscribed_col].replace({'Yes': 'Yes', 'No': 'No'})
-
-# Keep only Yes/No values
-df = df[df[subscribed_col].isin(['Yes', 'No'])]
-
-# Drop rows with NaN in essential columns
-df = df.dropna(subset=numeric_columns + [subscribed_col])
-
-with st.sidebar:
-    st.write("**Data Types After Cleaning:**")
-    st.write(df.dtypes)
-    st.write(f"**Rows after cleaning:** {len(df)}")
-
-# --- Robust Age/BMI slider bounds
-age_vals = df[age_col].dropna()
-bmi_vals = df[bmi_col].dropna()
-
-if age_vals.empty or bmi_vals.empty:
-    st.error("No valid data remains after cleaning. Please check your dataset for valid Age and BMI values.")
-    st.stop()
-
-age_min, age_max = int(age_vals.min()), int(age_vals.max())
-bmi_min, bmi_max = float(bmi_vals.min()), float(bmi_vals.max())
-
-# ---- FILTERS ----
+# SIDEBAR FILTERS
 st.sidebar.header("Filter Data")
 age = st.sidebar.slider(
     "Age",
-    age_min, age_max,
-    (age_min, age_max)
+    int(df[age_col].min()), int(df[age_col].max()),
+    (int(df[age_col].min()), int(df[age_col].max()))
 )
 bmi = st.sidebar.slider(
     "BMI",
-    bmi_min, bmi_max,
-    (bmi_min, bmi_max)
+    float(df[bmi_col].min()), float(df[bmi_col].max()),
+    (float(df[bmi_col].min()), float(df[bmi_col].max()))
 )
 subscription = st.sidebar.selectbox("Subscribed", ["Both", "Yes", "No"])
 
@@ -93,12 +55,13 @@ filtered_df = df[
 if subscription != "Both":
     filtered_df = filtered_df[filtered_df[subscribed_col] == subscription]
 
-# ---- DASHBOARD ----
+# HEADER
 st.title("Fitness App Subscription Analytics Dashboard")
 st.markdown(
     "This dashboard provides key insights into user behavior, health, and engagement with the fitness app to help management make data-driven decisions."
 )
 
+# TABS
 tabs = st.tabs([
     "Overview",
     "Engagement & Health",
@@ -106,7 +69,7 @@ tabs = st.tabs([
     "Custom Analysis"
 ])
 
-# ----------------- TAB 1: OVERVIEW -----------------
+# --------------------------- TAB 1: OVERVIEW ---------------------------
 with tabs[0]:
     st.subheader("General Overview")
     st.markdown(
@@ -144,7 +107,7 @@ with tabs[0]:
         Avg_Days_Active=(days_active_col, 'mean')
     ).reset_index(), use_container_width=True)
 
-# --------------- TAB 2: ENGAGEMENT & HEALTH --------------
+# ---------------------- TAB 2: ENGAGEMENT & HEALTH ----------------------------
 with tabs[1]:
     st.subheader("User Engagement & Health Metrics")
     st.markdown("Understand user engagement patterns and health metrics to improve product offering.")
@@ -179,7 +142,7 @@ with tabs[1]:
     sns.boxplot(x=subscribed_col, y=active_min_col, data=filtered_df, ax=ax6)
     st.pyplot(fig6)
 
-# --------------- TAB 3: SUBSCRIPTION ANALYSIS ---------------
+# ---------------------- TAB 3: SUBSCRIPTION ANALYSIS ----------------------------
 with tabs[2]:
     st.subheader("Detailed Subscription Analysis")
     st.markdown("Analyze drivers of subscription, conversion funnels, and micro-segments.")
@@ -236,7 +199,7 @@ with tabs[2]:
     sns.boxplot(x=subscribed_col, y=days_active_col, data=filtered_df, ax=ax13)
     st.pyplot(fig13)
 
-# --------------- TAB 4: CUSTOM ANALYSIS & DEEP DIVES ---------------
+# ---------------------- TAB 4: CUSTOM ANALYSIS & DEEP DIVES ----------------------------
 with tabs[3]:
     st.subheader("Custom Analysis and Deep Dives")
     st.markdown("For advanced users, explore the data with custom groupings and filters.")
@@ -266,4 +229,5 @@ with tabs[3]:
 
 st.markdown("---")
 st.caption("Dashboard created with Streamlit. © 2025 YourNameHere")
+
 
